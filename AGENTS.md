@@ -36,3 +36,31 @@ Invoice approval demo app: ASP.NET Core 8 Web API with a small static web UI.
 
 - Commit real credentials, tokens or customer data.
 - Add business logic to `Program.cs` or controllers.
+
+## Approval limits feature
+
+Business rules:
+
+- Manager may approve invoices up to and including 50,000.
+- Director may approve invoices up to and including 500,000.
+- Invoices above 500,000 require two distinct approvers.
+- The first approver above 500,000 may be a Manager or Director.
+- The second approver must be a Director.
+- The same user must never count as both approvers.
+- A valid first approval above 500,000 records the first approver and keeps the invoice pending.
+- An invalid approval attempt must return a clear reason.
+- Invalid attempts must not change invoice state or previously recorded approval data.
+
+Review expectations:
+
+- Check the exact boundaries 50,000 / 50,001 and 500,000 / 500,001.
+- Verify rejected attempts are atomic.
+- Verify duplicate-user and non-Director second approvals are tested.
+- Review generated tests for whether they would catch a real defect.
+- Keep implementation changes small and independently testable.
+- Run `dotnet test backend/InvoiceApp.sln` before committing.
+- Use Playwright for the required rejected over-limit UI test.
+- Record AI-assisted decisions and review findings in the assignment log.
+
+Spec Kit artifacts for this feature are under:
+`specs/001-approval-limits/`
