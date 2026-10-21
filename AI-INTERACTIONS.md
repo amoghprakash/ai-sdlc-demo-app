@@ -66,3 +66,24 @@ Generated artifact:
 ## Review principle
 
 AI output is not accepted automatically. Specifications, code, tests and review findings are checked against the assignment requirements, repository architecture and actual application behavior before acceptance.
+
+### Interaction 7 - Single-approver implementation
+Tool/Agent: GitHub Copilot using approval-implementation agent
+Purpose: Implement Manager and Director single-approver limits only.
+
+Initial review finding:
+Copilot initially mapped legacy Approver to Manager and Admin to Director.
+
+Human decision:
+Rejected that implicit mapping because the specification introduces Manager and Director as explicit roles.
+
+Correction:
+- Only Manager and Director are valid approval roles.
+- Manager limit is 50,000 inclusive.
+- Director limit is 500,000 inclusive.
+- Over-limit attempts fail before invoice mutation.
+- Two-approver workflow remains intentionally unimplemented in this step.
+
+Validation:
+`dotnet test backend/InvoiceApp.sln`
+Result: 10 passed, 0 failed.

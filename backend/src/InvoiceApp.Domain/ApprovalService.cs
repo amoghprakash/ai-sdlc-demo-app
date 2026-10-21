@@ -28,10 +28,11 @@ public class ApprovalService
         return invoice;
     }
 
-    public Invoice Approve(string invoiceId, string approver)
+    public Invoice Approve(string invoiceId, string approver, string role)
     {
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
+        ValidateApprovalLimit(invoice.Amount, role);
 
         invoice.Status = InvoiceStatus.Approved;
         invoice.DecidedBy = approver;
@@ -69,5 +70,38 @@ public class ApprovalService
             throw new InvalidOperationException(
                 $"Invoice {invoice.Id} is {invoice.Status}; only pending invoices can be decided.");
         }
+    }
+
+    private static void ValidateApprovalLimit(decimal amount, string role)
+    {
+        var normalizedRole = role?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(normalizedRole))
+        {
+            throw new InvalidOperationException("An approver role is required to approve an invoice.");
+        }
+
+        if (normalizedRole.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+        {
+            if (amount > 50_000m)
+            {
+                throw new InvalidOperationException("Manager approvals are limited to invoices up to 50,000.");
+            }
+
+            return;
+        }
+
+        if (normalizedRole.Equals("Director", StringComparison.OrdinalIgnoreCase))
+        {
+            if (amount > 500_000m)
+            {
+                throw new InvalidOperationException("Director approvals are limited to invoices up to 500,000.");
+            }
+
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Unsupported approver role '{role}'. Only Manager and Director roles are valid for approval limits.");
     }
 }
