@@ -87,3 +87,26 @@ Correction:
 Validation:
 `dotnet test backend/InvoiceApp.sln`
 Result: 10 passed, 0 failed.
+
+### Interaction 8 - Two-approver implementation
+Tool/Agent: GitHub Copilot using approval-implementation agent
+Purpose: Implement the high-value two-approver workflow.
+
+Implemented:
+- First approval above 500,000 records the first approver.
+- Invoice moves to PendingSecondApproval.
+- First approver may be Manager or Director.
+- Second approval must be by a different user.
+- Second approver must be Director.
+- Valid second approval completes the invoice.
+- Duplicate second approver is rejected without changing prior approval data.
+- Manager as second approver is rejected without changing prior approval data.
+
+Human review:
+- Removed duplicate same-user validation.
+- Removed misleading/dead Manager high-value validation branch.
+- Strengthened negative tests to verify decision state remains unchanged.
+
+Validation:
+`dotnet test backend/InvoiceApp.sln`
+Result: 13 passed, 0 failed.
