@@ -110,3 +110,25 @@ Human review:
 Validation:
 `dotnet test backend/InvoiceApp.sln`
 Result: 13 passed, 0 failed.
+
+### Interaction 9 - Playwright end-to-end coverage
+Tool/Agent: GitHub Copilot
+Purpose: Add the required rejected over-limit approval test through the UI.
+
+Implemented:
+- Manager signs in through the UI.
+- Creates and submits an invoice for 50,001.
+- Attempts approval.
+- Verifies the clear Manager-limit rejection message.
+- Reloads the application.
+- Verifies the invoice remains Pending Approval with the original amount.
+
+Environment issue:
+Playwright's bundled Chromium download repeatedly timed out.
+
+Resolution:
+Configured Playwright to use the locally installed Google Chrome browser.
+
+Validation:
+`npm test`
+Result: 1 Playwright test passed using Chrome.
