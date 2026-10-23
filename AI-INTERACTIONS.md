@@ -132,3 +132,34 @@ Configured Playwright to use the locally installed Google Chrome browser.
 Validation:
 `npm test`
 Result: 1 Playwright test passed using Chrome.
+
+### Interaction 10 - Mutation testing and test strengthening
+Tool/Agent: Stryker.NET + GitHub Copilot approval-review agent
+Purpose: Measure test effectiveness and strengthen approval-rule tests.
+
+Baseline:
+- Unit tests: 13
+- Overall mutation score: 52.83%
+- ApprovalService mutation score: 64.37%
+- ApprovalService covered-code score: 75.68%
+- Killed: 56
+- Survived: 20
+- No coverage: 30
+
+Action:
+Added six focused unit tests targeting approval boundaries, role validation,
+high-value first approval, duplicate approvers, Director-only second approval,
+status transitions, and unchanged-state guarantees.
+
+After improvement:
+- Unit tests: 19
+- Overall mutation score: 57.55%
+- ApprovalService mutation score: 70.11%
+- ApprovalService covered-code score: 78.21%
+- Killed: 61
+- Survived: 19
+- No coverage: 26
+
+Human review:
+Production behavior was not weakened or altered to improve the mutation score.
+Tests were strengthened based on meaningful surviving mutants in ApprovalService.

@@ -29,10 +29,12 @@ public class ApprovalServiceTests
         Assert.Throws<InvalidOperationException>(() => service.Submit("INV-1"));
     }
 
-    [Fact]
-    public void Approve_SetsStatusApproverAndTimestamp_ForManagerAtBoundary()
+    [Theory]
+    [InlineData(49_999)]
+    [InlineData(50_000)]
+    public void Approve_SetsStatusApproverAndTimestamp_ForManagerAtOrBelowLimit(int amount)
     {
-        var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.PendingApproval, 50_000m));
+        var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.PendingApproval, amount));
 
         var result = service.Approve("INV-1", "demo.manager", "Manager");
 
@@ -49,8 +51,28 @@ public class ApprovalServiceTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-1", "demo.manager", "Manager"));
 
-        Assert.Contains("50,000", ex.Message);
+        Assert.Equal("Manager approvals are limited to invoices up to 50,000.", ex.Message);
         Assert.Equal(InvoiceStatus.PendingApproval, invoice.Status);
+        Assert.Null(invoice.DecidedBy);
+        Assert.Null(invoice.DecidedAt);
+    }
+
+    [Theory]
+    [InlineData("Approver", "Unsupported approver role")]
+    [InlineData("Admin", "Unsupported approver role")]
+    [InlineData("", "An approver role is required")]
+    [InlineData("   ", "An approver role is required")]
+    public void Approve_RejectsInvalidRole_WithoutMutatingInvoice(string role, string expectedMessage)
+    {
+        var invoice = InvoiceWith("INV-1", InvoiceStatus.PendingApproval);
+        var service = ServiceFor(invoice);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-1", "demo.user", role));
+
+        Assert.Contains(expectedMessage, ex.Message);
+        Assert.Equal(InvoiceStatus.PendingApproval, invoice.Status);
+        Assert.Null(invoice.FirstApprover);
+        Assert.Null(invoice.SecondApprover);
         Assert.Null(invoice.DecidedBy);
         Assert.Null(invoice.DecidedAt);
     }
@@ -61,16 +83,17 @@ public class ApprovalServiceTests
         var invoice = InvoiceWith("INV-2", InvoiceStatus.PendingApproval, 600_000m);
         var service = ServiceFor(invoice);
 
-        var firstApproval = service.Approve("INV-2", "demo.manager", "Manager");
+        var firstApproval = service.Approve("INV-2", "demo.manager", " mAnAgEr ");
         Assert.Equal(InvoiceStatus.PendingSecondApproval, firstApproval.Status);
         Assert.Equal("demo.manager", firstApproval.FirstApprover);
 
-        var secondApproval = service.Approve("INV-2", "demo.director", "Director");
+        var secondApproval = service.Approve("INV-2", "demo.director", "director");
 
         Assert.Equal(InvoiceStatus.Approved, secondApproval.Status);
         Assert.Equal("demo.manager", secondApproval.FirstApprover);
         Assert.Equal("demo.director", secondApproval.SecondApprover);
         Assert.Equal("demo.director", secondApproval.DecidedBy);
+        Assert.NotNull(secondApproval.DecidedAt);
     }
 
     [Fact]
@@ -81,7 +104,7 @@ public class ApprovalServiceTests
 
         service.Approve("INV-3", "demo.manager", "Manager");
 
-        var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-3", "demo.manager", "Director"));
+        var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-3", "DEMO.MANAGER", "Director"));
 
         Assert.Contains("same user", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(InvoiceStatus.PendingSecondApproval, invoice.Status);
@@ -101,7 +124,7 @@ public class ApprovalServiceTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-4", "demo.manager", "Manager"));
 
-        Assert.Contains("Director", ex.Message);
+        Assert.Equal("The second approver must be a Director.", ex.Message);
         Assert.Equal(InvoiceStatus.PendingSecondApproval, invoice.Status);
         Assert.Equal("demo.director", invoice.FirstApprover);
         Assert.Null(invoice.SecondApprover);
@@ -109,12 +132,14 @@ public class ApprovalServiceTests
         Assert.Null(invoice.DecidedAt);
     }
 
-    [Fact]
-    public void Approve_SetsStatusApproverAndTimestamp_ForDirectorAtBoundary()
+    [Theory]
+    [InlineData(499_999)]
+    [InlineData(500_000)]
+    public void Approve_SetsStatusApproverAndTimestamp_ForDirectorAtOrBelowLimit(int amount)
     {
-        var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.PendingApproval, 500_000m));
+        var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.PendingApproval, amount));
 
-        var result = service.Approve("INV-1", "demo.director", "Director");
+        var result = service.Approve("INV-1", "demo.director", "DIRECTOR");
 
         Assert.Equal(InvoiceStatus.Approved, result.Status);
         Assert.Equal("demo.director", result.DecidedBy);
