@@ -197,3 +197,19 @@ Result: 19 passed, 0 failed.
 
 `npm test`
 Result: 2 Playwright tests passed.
+
+### Interaction 12 - Hook and sub-agent validation
+Tool/Agent: GitHub Copilot parent agent with approval-review sub-agent
+Purpose: Validate explicit sub-agent delegation and hook-based workflow evidence.
+
+Action:
+- The main Copilot agent delegated an independent approval-rule review to the approval-review custom sub-agent.
+- Repository hooks captured Copilot lifecycle events.
+- The hook log recorded USER_PROMPT, SUBAGENT_STOP and AGENT_STOP events.
+- The sub-agent reviewed approval boundaries, duplicate approver prevention, Director-only second approval, state preservation and test coverage.
+- No production files were modified during this validation.
+
+Evidence:
+- .github/agents/approval-review.md
+- .github/hooks/assignment-hooks.json
+- .github/logs/copilot-hooks.log

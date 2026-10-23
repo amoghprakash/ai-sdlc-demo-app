@@ -4,7 +4,37 @@
     "sessionStart": [
       {
         "type": "command",
-        "command": "echo AI SDLC agent session started"
+        "powershell": "Add-Content -Path .github/logs/copilot-hooks.log -Value \"SESSION_START $(Get-Date -Format o)\"",
+        "bash": "echo \"SESSION_START $(date -Iseconds)\" >> .github/logs/copilot-hooks.log",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "powershell": "Add-Content -Path .github/logs/copilot-hooks.log -Value \"USER_PROMPT $(Get-Date -Format o)\"",
+        "bash": "echo \"USER_PROMPT $(date -Iseconds)\" >> .github/logs/copilot-hooks.log",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "powershell": "Add-Content -Path .github/logs/copilot-hooks.log -Value \"AGENT_STOP $(Get-Date -Format o)\"",
+        "bash": "echo \"AGENT_STOP $(date -Iseconds)\" >> .github/logs/copilot-hooks.log",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "powershell": "Add-Content -Path .github/logs/copilot-hooks.log -Value \"SUBAGENT_STOP $(Get-Date -Format o)\"",
+        "bash": "echo \"SUBAGENT_STOP $(date -Iseconds)\" >> .github/logs/copilot-hooks.log",
+        "cwd": ".",
+        "timeoutSec": 10
       }
     ]
   }
