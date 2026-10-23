@@ -21,7 +21,7 @@ Success response:
 
 Failure response:
 
-- HTTP 400 with a clear error message when the approval is invalid
+- HTTP 409 with a clear error message when the approval is invalid
 - Invoice state remains unchanged
 
 ### POST /api/approvals/{invoiceId}/reject

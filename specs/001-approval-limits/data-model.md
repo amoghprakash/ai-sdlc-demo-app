@@ -49,7 +49,6 @@ PendingApproval -> Approved
 PendingApproval -> Rejected
 PendingApproval -> PendingSecondApproval (only when amount > 500,000 and the request is valid)
 PendingSecondApproval -> Approved
-PendingSecondApproval -> Rejected
 ```
 
 ## Validation rules

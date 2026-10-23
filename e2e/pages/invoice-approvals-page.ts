@@ -22,15 +22,29 @@ export class InvoiceApprovalsPage {
   }
 
   async attemptApproval(customerName: string): Promise<void> {
-    await this.page.getByRole('tab', { name: 'Approvals' }).click();
-    const pendingInvoice = this.page.getByRole('listitem').filter({ hasText: customerName });
-    await expect(pendingInvoice).toBeVisible();
-    await pendingInvoice.getByRole('button', { name: /^Approve invoice / }).click();
+    await this.approveInvoice(customerName);
 
     const approvalPanel = this.page.getByRole('tabpanel', { name: 'Approvals' });
     await expect(approvalPanel.getByRole('alert')).toContainText(
       'Manager approvals are limited to invoices up to 50,000.'
     );
+  }
+
+  async approveInvoice(customerName: string): Promise<void> {
+    await this.page.getByRole('tab', { name: 'Approvals' }).click();
+    const pendingInvoice = this.page.getByRole('listitem').filter({ hasText: customerName });
+    await expect(pendingInvoice).toBeVisible();
+    await pendingInvoice.getByRole('button', { name: /^Approve invoice / }).click();
+  }
+
+  async signOut(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(this.page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  }
+
+  async expectInvoiceStatus(customerName: string, status: string): Promise<void> {
+    await this.page.getByRole('tab', { name: 'Invoices' }).click();
+    await expect(this.invoiceRow(customerName)).toContainText(status);
   }
 
   async reloadAndExpectPendingInvoice(customerName: string, amountText: string): Promise<void> {

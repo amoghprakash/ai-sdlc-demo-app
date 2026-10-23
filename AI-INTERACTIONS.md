@@ -163,3 +163,37 @@ After improvement:
 Human review:
 Production behavior was not weakened or altered to improve the mutation score.
 Tests were strengthened based on meaningful surviving mutants in ApprovalService.
+
+### Interaction 11 - Final pull request review
+Tool/Agent: GitHub Copilot using approval-review agent
+Purpose: Review the complete diff from main to feature/approval-limits.
+
+Finding 1:
+Severity: Medium
+Issue: PendingSecondApproval invoices were not available in the UI approval queue, so the second approval could not be completed through the application.
+Verdict: Fixed
+Action:
+- Updated the UI to surface PendingSecondApproval invoices.
+- Added a Playwright test for the complete high-value two-step approval flow.
+
+Finding 2:
+Severity: Medium
+Issue: The generated data model documented PendingSecondApproval -> Rejected, but that transition was not part of the assignment scope or implemented behavior.
+Verdict: Fixed
+Action:
+- Removed the unsupported transition from the generated data-model documentation.
+
+Finding 3:
+Severity: Medium
+Issue: The generated API contract documented HTTP 400 for invalid approval attempts, while the existing shared controller convention returns HTTP 409 for InvalidOperationException.
+Verdict: Fixed
+Action:
+- Updated the API contract documentation to HTTP 409.
+- Preserved the existing shared controller behavior.
+
+Validation:
+`dotnet test backend/InvoiceApp.sln`
+Result: 19 passed, 0 failed.
+
+`npm test`
+Result: 2 Playwright tests passed.
