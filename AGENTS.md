@@ -4,7 +4,7 @@ Invoice approval demo app: ASP.NET Core 8 Web API with a small static web UI.
 
 ## Layout
 
-- `backend/src/InvoiceApp.Domain`: business rules, no web or storage code. `ApprovalService` owns the invoice lifecycle (Draft, PendingApproval, Approved, Rejected).
+- `backend/src/InvoiceApp.Domain`: business rules, no web or storage code. `ApprovalService` owns the invoice lifecycle (Draft, PendingApproval, PendingSecondApproval, Approved, Rejected).
 - `backend/src/InvoiceApp.Api`: controllers, sign-in (`Auth/`), in-memory repository, and the web UI under `wwwroot/`.
 - `backend/tests/InvoiceApp.Tests`: xUnit tests, one test class per class under test, named `<ClassUnderTest>Tests`.
 - `e2e`: Playwright end-to-end tests (`tests/`) and page objects (`pages/`).
@@ -67,4 +67,5 @@ Review expectations:
 
 Spec Kit artifacts for this feature are under:
 `specs/001-approval-limits/`
+
 
