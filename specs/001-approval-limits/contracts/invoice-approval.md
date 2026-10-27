@@ -55,9 +55,10 @@ For invoices above 500,000:
 The API should return user-facing error text that explains why an approval failed, for example:
 
 - "Manager approvals are limited to invoices up to 50,000."
-- "The same user cannot act as both approvers on the same invoice."`r`n- "The second approver must be a Director."
 - "The same user cannot act as both approvers on the same invoice."
+- "The second approver must be a Director."
 
 These messages must not rely on internal implementation details and should be safe for business users to interpret.
+
 
 
