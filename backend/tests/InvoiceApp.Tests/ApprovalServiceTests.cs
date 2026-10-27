@@ -1,4 +1,12 @@
 using InvoiceApp.Domain;
+using InvoiceApp.Api;
+using InvoiceApp.Api.Auth;
+using InvoiceApp.Api.Controllers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 using Xunit;
 
 namespace InvoiceApp.Tests;
@@ -168,7 +176,45 @@ public class ApprovalServiceTests
     {
         var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.Draft));
 
-        Assert.Throws<InvalidOperationException>(() => service.Approve("INV-1", "demo.approver", "Approver"));
+        var ex = Assert.Throws<InvalidOperationException>(() => service.Approve("INV-1", "demo.manager", "Manager"));
+
+        Assert.Equal("Invoice INV-1 is Draft; only pending invoices can be decided.", ex.Message);
+    }
+
+    [Fact]
+    public async Task Approve_OnlyOneConcurrentFirstApproverCanTransitionHighValueInvoice()
+    {
+        using var repository = new SynchronizedReadInvoiceRepository(new InMemoryInvoiceRepository(), 2);
+        repository.Add(InvoiceWith("INV-CONCURRENT", InvoiceStatus.PendingApproval, 600_000m));
+        var service = new ApprovalService(repository);
+
+        var attempts = await Task.WhenAll(
+            TryApproveAsync(service, "demo.manager", "Manager"),
+            TryApproveAsync(service, "demo.director", "Director"));
+
+        var success = Assert.Single(attempts, attempt => attempt.Invoice is not null);
+        var failure = Assert.Single(attempts, attempt => attempt.Error is not null);
+        Assert.Contains("changed while the request was being processed", failure.Error!.Message);
+        Assert.NotNull(success.Invoice!.FirstApprover);
+        Assert.Contains(success.Invoice.FirstApprover, new[] { "demo.manager", "demo.director" });
+
+        var storedInvoice = repository.GetById("INV-CONCURRENT");
+        Assert.Equal(InvoiceStatus.PendingSecondApproval, storedInvoice!.Status);
+        Assert.Equal(success.Invoice.FirstApprover, storedInvoice.FirstApprover);
+        Assert.Null(storedInvoice.SecondApprover);
+        Assert.Null(storedInvoice.DecidedBy);
+        Assert.Null(storedInvoice.DecidedAt);
+    }
+
+    [Fact]
+    public void ApprovalRoleAuthorization_AllowsManagersAndDirectorsToApproveButNotReject()
+    {
+        Assert.True(IsAuthorized(nameof(ApprovalsController.Approve), "Manager"));
+        Assert.True(IsAuthorized(nameof(ApprovalsController.Approve), "Director"));
+        Assert.False(IsAuthorized(nameof(ApprovalsController.Reject), "Manager"));
+        Assert.False(IsAuthorized(nameof(ApprovalsController.Reject), "Director"));
+        Assert.True(IsAuthorized(nameof(ApprovalsController.Reject), "Approver"));
+        Assert.True(IsAuthorized(nameof(ApprovalsController.Reject), "Admin"));
     }
 
     [Fact]
@@ -196,5 +242,77 @@ public class ApprovalServiceTests
         var service = ServiceFor(InvoiceWith("INV-1", InvoiceStatus.PendingApproval));
 
         Assert.Throws<ArgumentException>(() => service.Reject("INV-1", "demo.approver", "  "));
+    }
+
+    private static async Task<(Invoice? Invoice, InvalidOperationException? Error)> TryApproveAsync(
+        ApprovalService service,
+        string approver,
+        string role) =>
+        await Task.Run(() =>
+        {
+            try
+            {
+                return (service.Approve("INV-CONCURRENT", approver, role), (InvalidOperationException?)null);
+            }
+            catch (InvalidOperationException error)
+            {
+                return ((Invoice?)null, error);
+            }
+        });
+
+    private static bool IsAuthorized(string actionName, string role)
+    {
+        var method = typeof(ApprovalsController).GetMethod(actionName)!;
+        var authorization = method.GetCustomAttributes(typeof(RequireRoleAttribute), inherit: true)
+            .Cast<RequireRoleAttribute>()
+            .Single();
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[HttpContextExtensions.SessionKey] = new UserSession("demo.user", role);
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+        var filterContext = new ActionExecutingContext(
+            actionContext,
+            new List<IFilterMetadata>(),
+            new Dictionary<string, object?>(),
+            new ApprovalsController(ServiceFor()));
+
+        authorization.OnActionExecuting(filterContext);
+        return filterContext.Result is null;
+    }
+
+    private sealed class SynchronizedReadInvoiceRepository : IInvoiceRepository, IDisposable
+    {
+        private readonly InMemoryInvoiceRepository _repository;
+        private readonly Barrier _readBarrier;
+        private readonly int _synchronizedReadCount;
+        private int _readCount;
+
+        public SynchronizedReadInvoiceRepository(InMemoryInvoiceRepository repository, int synchronizedReadCount)
+        {
+            _repository = repository;
+            _synchronizedReadCount = synchronizedReadCount;
+            _readBarrier = new Barrier(synchronizedReadCount);
+        }
+
+        public IReadOnlyList<Invoice> GetAll() => _repository.GetAll();
+
+        public Invoice? GetById(string id)
+        {
+            var invoice = _repository.GetById(id);
+            if (Interlocked.Increment(ref _readCount) <= _synchronizedReadCount &&
+                !_readBarrier.SignalAndWait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Concurrent approval requests did not reach the read barrier.");
+            }
+
+            return invoice;
+        }
+
+        public IReadOnlyList<Invoice> GetByIds(IEnumerable<string> ids) => _repository.GetByIds(ids);
+        public Invoice Add(Invoice invoice) => _repository.Add(invoice);
+        public void Update(Invoice invoice) => _repository.Update(invoice);
+        public Invoice? TryUpdate(string id, InvoiceStatus expectedStatus, Action<Invoice> update) =>
+            _repository.TryUpdate(id, expectedStatus, update);
+        public bool Remove(string id) => _repository.Remove(id);
+        public void Dispose() => _readBarrier.Dispose();
     }
 }

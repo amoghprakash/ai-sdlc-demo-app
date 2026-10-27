@@ -2,7 +2,8 @@ namespace InvoiceApp.Domain;
 
 /// <summary>
 /// Moves an invoice through its lifecycle: Draft -> PendingApproval -> Approved or Rejected.
-/// One invoice at a time, decided as a whole by a single approver.
+/// Standard invoices use one approver; invoices above 500,000 require a first approval
+/// followed by approval from a different Director.
 /// </summary>
 public class ApprovalService
 {
@@ -23,9 +24,8 @@ public class ApprovalService
                 $"Invoice {invoiceId} is {invoice.Status}; only drafts can be submitted.");
         }
 
-        invoice.Status = InvoiceStatus.PendingApproval;
-        _repository.Update(invoice);
-        return invoice;
+        return ApplyTransition(invoice, InvoiceStatus.Draft,
+            current => current.Status = InvoiceStatus.PendingApproval);
     }
 
     public Invoice Approve(string invoiceId, string approver, string role)
@@ -40,11 +40,12 @@ public class ApprovalService
         EnsurePending(invoice);
         ValidateSingleApproverLimit(invoice.Amount, role);
 
-        invoice.Status = InvoiceStatus.Approved;
-        invoice.DecidedBy = approver;
-        invoice.DecidedAt = DateTime.UtcNow;
-        _repository.Update(invoice);
-        return invoice;
+        return ApplyTransition(invoice, InvoiceStatus.PendingApproval, current =>
+        {
+            current.Status = InvoiceStatus.Approved;
+            current.DecidedBy = approver;
+            current.DecidedAt = DateTime.UtcNow;
+        });
     }
 
     public Invoice Reject(string invoiceId, string approver, string reason)
@@ -57,12 +58,13 @@ public class ApprovalService
         var invoice = Find(invoiceId);
         EnsurePending(invoice);
 
-        invoice.Status = InvoiceStatus.Rejected;
-        invoice.DecidedBy = approver;
-        invoice.DecidedAt = DateTime.UtcNow;
-        invoice.DecisionNote = reason;
-        _repository.Update(invoice);
-        return invoice;
+        return ApplyTransition(invoice, InvoiceStatus.PendingApproval, current =>
+        {
+            current.Status = InvoiceStatus.Rejected;
+            current.DecidedBy = approver;
+            current.DecidedAt = DateTime.UtcNow;
+            current.DecisionNote = reason;
+        });
     }
 
     private Invoice Find(string invoiceId) =>
@@ -89,26 +91,40 @@ public class ApprovalService
                 throw new InvalidOperationException("An approver is required for the first approval.");
             }
 
-            invoice.FirstApprover = approver;
-            invoice.Status = InvoiceStatus.PendingSecondApproval;
-            _repository.Update(invoice);
-            return invoice;
+            return ApplyTransition(invoice, InvoiceStatus.PendingApproval, current =>
+            {
+                current.FirstApprover = approver;
+                current.Status = InvoiceStatus.PendingSecondApproval;
+            });
         }
 
         if (invoice.Status == InvoiceStatus.PendingSecondApproval)
         {
             ValidateSecondApproval(invoice, approver, role);
 
-            invoice.SecondApprover = approver;
-            invoice.Status = InvoiceStatus.Approved;
-            invoice.DecidedBy = approver;
-            invoice.DecidedAt = DateTime.UtcNow;
-            _repository.Update(invoice);
-            return invoice;
+            return ApplyTransition(invoice, InvoiceStatus.PendingSecondApproval, current =>
+            {
+                current.SecondApprover = approver;
+                current.Status = InvoiceStatus.Approved;
+                current.DecidedBy = approver;
+                current.DecidedAt = DateTime.UtcNow;
+            });
         }
 
         throw new InvalidOperationException(
             $"Invoice {invoice.Id} is {invoice.Status}; only pending or second-approval invoices can be decided.");
+    }
+
+    private Invoice ApplyTransition(Invoice invoice, InvoiceStatus expectedStatus, Action<Invoice> update)
+    {
+        var updatedInvoice = _repository.TryUpdate(invoice.Id, expectedStatus, update);
+        if (updatedInvoice is null)
+        {
+            throw new InvalidOperationException(
+                $"Invoice {invoice.Id} changed while the request was being processed; reload and try again.");
+        }
+
+        return updatedInvoice;
     }
 
     private static void ValidateSingleApproverLimit(decimal amount, string role, bool allowHighValueFirstApproval = false)

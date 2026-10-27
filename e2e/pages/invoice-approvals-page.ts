@@ -24,10 +24,12 @@ export class InvoiceApprovalsPage {
   async attemptApproval(customerName: string): Promise<void> {
     await this.approveInvoice(customerName);
 
+    await this.expectDecisionError('Manager approvals are limited to invoices up to 50,000.');
+  }
+
+  async expectDecisionError(message: string): Promise<void> {
     const approvalPanel = this.page.getByRole('tabpanel', { name: 'Approvals' });
-    await expect(approvalPanel.getByRole('alert')).toContainText(
-      'Manager approvals are limited to invoices up to 50,000.'
-    );
+    await expect(approvalPanel.getByRole('alert')).toContainText(message);
   }
 
   async approveInvoice(customerName: string): Promise<void> {
@@ -54,6 +56,29 @@ export class InvoiceApprovalsPage {
     const invoiceRow = this.invoiceRow(customerName);
     await expect(invoiceRow).toContainText(amountText);
     await expect(invoiceRow).toContainText('Pending Approval');
+  }
+
+  async reloadAndExpectSecondApproval(
+    customerName: string,
+    amountText: string,
+    firstApprover: string
+  ): Promise<void> {
+    const invoicesResponse = this.page.waitForResponse((response) =>
+      response.url().endsWith('/api/invoices') && response.request().method() === 'GET'
+    );
+    await this.page.reload();
+    const invoices = await (await invoicesResponse).json();
+    const invoice = invoices.find((item: { customerName: string }) => item.customerName === customerName);
+
+    expect(invoice).toMatchObject({
+      status: 'PendingSecondApproval',
+      firstApprover,
+    });
+    await expect(this.page.getByRole('tab', { name: 'Invoices' })).toBeVisible();
+
+    const invoiceRow = this.invoiceRow(customerName);
+    await expect(invoiceRow).toContainText(amountText);
+    await expect(invoiceRow).toContainText('Pending Second Approval');
   }
 
   private invoiceRow(customerName: string) {

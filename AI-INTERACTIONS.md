@@ -213,3 +213,23 @@ Evidence:
 - .github/agents/approval-review.md
 - .github/hooks/assignment-hooks.json
 - .github/logs/copilot-hooks.log
+
+### Interaction 13 - Final PR review fixes
+Tool/Agent: GitHub Copilot
+Purpose: Address all findings from the final approval-limits PR review without changing unrelated functionality.
+
+Implemented:
+- Added repository compare-and-set transitions keyed by expected invoice status. Repository reads return snapshots, so concurrent high-value first approvals cannot both transition or overwrite `FirstApprover`.
+- Added a deterministic concurrency unit test proving one first approval succeeds and the stale request fails clearly.
+- Moved approval role authorization to the Approve action; Reject remains restricted to Approver and Admin. Added action-filter coverage for both roles.
+- Updated E2E setup documentation to require Google Chrome, matching Playwright's `channel: 'chrome'` configuration.
+- Changed the draft-state test to use Manager and verify the draft-specific error.
+- Added Playwright coverage for a duplicate second approval, including the 409 response and persisted first-approver/pending-second state after reload.
+- Updated the ApprovalService XML summary to describe both single-approver and high-value two-approver workflows.
+
+Validation:
+`dotnet test backend/InvoiceApp.sln`
+Result: 21 passed, 0 failed.
+
+`npm test`
+Result: 3 Playwright tests passed.

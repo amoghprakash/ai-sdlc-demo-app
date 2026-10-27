@@ -54,3 +54,26 @@ test('Manager and a different Director complete high-value approval through the 
   });
   await invoicePage.expectInvoiceStatus(customerName, 'Approved');
 });
+
+test('duplicate second approval is rejected and preserves the first approver', async ({ page }) => {
+  const invoicePage = new InvoiceApprovalsPage(page);
+  const customerName = `Duplicate second approver ${Date.now()}`;
+
+  await page.goto('/');
+  await invoicePage.signIn('demo.manager', 'ChangeMe123!');
+  await invoicePage.createAndSubmitInvoice(customerName, 600_001);
+  await invoicePage.approveInvoice(customerName);
+  await invoicePage.expectInvoiceStatus(customerName, 'Pending Second Approval');
+
+  const invalidApprovalResponse = page.waitForResponse((response) =>
+    response.url().includes('/api/approvals/') &&
+    response.url().endsWith('/approve') &&
+    response.request().method() === 'POST'
+  );
+  await invoicePage.approveInvoice(customerName);
+  const response = await invalidApprovalResponse;
+  expect(response.status()).toBe(409);
+  await invoicePage.expectDecisionError('same user');
+
+  await invoicePage.reloadAndExpectSecondApproval(customerName, '$600,001.00', 'demo.manager');
+});

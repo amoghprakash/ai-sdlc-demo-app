@@ -12,4 +12,18 @@ public class Invoice
     public string? DecidedBy { get; set; }
     public DateTime? DecidedAt { get; set; }
     public string? DecisionNote { get; set; }
+
+    public Invoice Copy() => new()
+    {
+        Id = Id,
+        CustomerName = CustomerName,
+        Amount = Amount,
+        Status = Status,
+        CreatedAt = CreatedAt,
+        FirstApprover = FirstApprover,
+        SecondApprover = SecondApprover,
+        DecidedBy = DecidedBy,
+        DecidedAt = DecidedAt,
+        DecisionNote = DecisionNote
+    };
 }

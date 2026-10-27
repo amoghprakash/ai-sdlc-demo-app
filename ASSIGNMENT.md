@@ -22,8 +22,8 @@ Implemented approval limits in the .NET 8 invoice approval application:
 
 ## Validation Results
 
-- Unit tests: `dotnet test backend/InvoiceApp.sln` - 19 passed, 0 failed.
-- Playwright: `npm test` - 2 passed.
+- Unit tests: `dotnet test backend/InvoiceApp.sln` - 21 passed, 0 failed. Coverage includes atomic concurrent first approval and action-level approval/rejection authorization.
+- Playwright: `npm test` - 3 passed. Coverage includes over-limit rejection, successful two-step approval, and rejected duplicate second approval with first-approval state preserved.
 - Mutation testing before test strengthening: overall 52.83%; `ApprovalService` 64.37% (covered-code score 75.68%).
 - Mutation testing after test strengthening: overall 57.55%; `ApprovalService` 70.11% (covered-code score 78.21%).
 
@@ -32,6 +32,11 @@ Implemented approval limits in the .NET 8 invoice approval application:
 1. `PendingSecondApproval` was missing from the UI approval queue - fixed; the queue now supports the second approval and has a complete two-approver Playwright test.
 2. The data model documented an unsupported `PendingSecondApproval -> Rejected` transition - fixed by removing that transition from the documentation.
 3. The API contract documented HTTP 400 for invalid approvals while the shared handler returns HTTP 409 - fixed by aligning the contract to 409.
+4. Concurrent first approvals could overwrite `FirstApprover` - fixed with atomic expected-status repository transitions and a concurrency test.
+5. Manager and Director could use Reject after approval-role access was added - fixed with action-level role restrictions and an authorization test.
+6. The E2E setup instructions installed Chromium although Playwright selects Chrome - fixed by documenting the Google Chrome requirement and matching install command.
+7. The draft-state test used an unsupported role - fixed by using Manager and asserting the draft-specific message.
+8. The service summary described only a single approver - fixed to document both approval workflows.
 
 ## Feature Branch Commit History
 
