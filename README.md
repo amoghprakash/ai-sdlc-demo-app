@@ -14,6 +14,8 @@ Open http://localhost:5000 and sign in:
 | --- | --- | --- |
 | `demo.approver` | `ChangeMe123!` | Approver |
 | `demo.admin` | `ChangeMe123!` | Admin |
+| `demo.manager` | `ChangeMe123!` | Manager |
+| `demo.director` | `ChangeMe123!` | Director |
 
 These are demo accounts for a local, in-memory app. They are not real credentials.
 
@@ -21,9 +23,12 @@ These are demo accounts for a local, in-memory app. They are not real credential
 
 1. Create an invoice (it starts as a draft).
 2. Submit it for approval.
-3. An approver approves it, or rejects it with a reason.
+3. A Manager may approve invoices up to 50,000.
+4. A Director may approve invoices up to 500,000.
+5. Invoices above 500,000 require two distinct approvers; the first may be a Manager or Director, and the second must be a Director.
+6. An Approver or Admin may reject an invoice with a reason.
 
-Invoices move through Draft, Pending Approval, then Approved or Rejected.
+Invoices move through Draft, Pending Approval, then Approved or Rejected. High-value invoices move through Pending Second Approval before final approval.
 
 ## Tests
 

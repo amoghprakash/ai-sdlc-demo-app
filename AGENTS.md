@@ -32,6 +32,8 @@ Invoice approval demo app: ASP.NET Core 8 Web API with a small static web UI.
 
 - `demo.approver` / `ChangeMe123!` (role Approver)
 - `demo.admin` / `ChangeMe123!` (role Admin)
+- `demo.manager` / `ChangeMe123!` (role Manager)
+- `demo.director` / `ChangeMe123!` (role Director)
 
 ## Never
 
