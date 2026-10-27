@@ -1,7 +1,7 @@
 namespace InvoiceApp.Domain;
 
 /// <summary>
-/// Moves an invoice through its lifecycle: Draft -> PendingApproval -> Approved or Rejected.
+/// Moves an invoice through its lifecycle: Draft -> PendingApproval -> Approved or Rejected; high-value invoices use PendingSecondApproval before final approval.
 /// Standard invoices use one approver; invoices above 500,000 require a first approval
 /// followed by approval from a different Director.
 /// </summary>
@@ -183,3 +183,4 @@ public class ApprovalService
         }
     }
 }
+
