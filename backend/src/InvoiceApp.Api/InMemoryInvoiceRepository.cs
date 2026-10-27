@@ -19,18 +19,18 @@ public class InMemoryInvoiceRepository : IInvoiceRepository
 
     public IReadOnlyList<Invoice> GetAll()
     {
-        lock (_lock) return _invoices.ToList();
+        lock (_lock) return _invoices.Select(invoice => invoice.Copy()).ToList();
     }
 
     public Invoice? GetById(string id)
     {
-        lock (_lock) return _invoices.FirstOrDefault(i => i.Id == id);
+        lock (_lock) return _invoices.FirstOrDefault(invoice => invoice.Id == id)?.Copy();
     }
 
     public IReadOnlyList<Invoice> GetByIds(IEnumerable<string> ids)
     {
         var wanted = ids.ToHashSet();
-        lock (_lock) return _invoices.Where(i => wanted.Contains(i.Id)).ToList();
+        lock (_lock) return _invoices.Where(invoice => wanted.Contains(invoice.Id)).Select(invoice => invoice.Copy()).ToList();
     }
 
     public Invoice Add(Invoice invoice)
@@ -53,6 +53,21 @@ public class InMemoryInvoiceRepository : IInvoiceRepository
         {
             var index = _invoices.FindIndex(i => i.Id == invoice.Id);
             if (index >= 0) _invoices[index] = invoice;
+        }
+    }
+
+    public Invoice? TryUpdate(string id, InvoiceStatus expectedStatus, Action<Invoice> update)
+    {
+        lock (_lock)
+        {
+            var invoice = _invoices.FirstOrDefault(candidate => candidate.Id == id);
+            if (invoice is null || invoice.Status != expectedStatus)
+            {
+                return null;
+            }
+
+            update(invoice);
+            return invoice.Copy();
         }
     }
 

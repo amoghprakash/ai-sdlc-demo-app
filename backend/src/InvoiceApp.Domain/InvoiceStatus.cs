@@ -4,6 +4,7 @@ public enum InvoiceStatus
 {
     Draft,
     PendingApproval,
+    PendingSecondApproval,
     Approved,
     Rejected
 }

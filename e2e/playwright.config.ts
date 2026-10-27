@@ -7,9 +7,10 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://localhost:5000',
+    channel: 'chrome',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{ name: 'chrome', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'dotnet run --project ../backend/src/InvoiceApp.Api',
     url: 'http://localhost:5000',
